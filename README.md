@@ -1,0 +1,2 @@
+# TodoSpringCore
+Todo application
