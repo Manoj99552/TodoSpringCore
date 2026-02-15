@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context.xsd
+           http://www.springframework.org/schema/tx
+           http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!-- 
+        ========== SPRING APPLICATION CONTEXT CONFIGURATION ==========
+        
+        This XML file configures the Spring IoC (Inversion of Control) Container
+        
+        What is IoC Container?
+        - A container that creates and manages objects (beans)
+        - Handles dependency injection automatically
+        - Manages object lifecycle (creation, initialization, destruction)
+        
+        What are Beans?
+        - Objects managed by Spring
+        - Configured in this file or via annotations
+        - Spring creates them and injects dependencies
+    -->
+
+    <!-- 
+        ========== COMPONENT SCANNING ==========
+        
+        Tells Spring to scan the com.todo package for annotated classes
+        
+        Spring will automatically detect and register classes with these annotations:
+        - @Component (generic component)
+        - @Repository (DAO layer)
+        - @Service (Service layer)
+        - @Controller (not used in this console app)
+        
+        This is how Spring finds TodoDAOImpl and TodoServiceImpl
+    -->
+    <context:component-scan base-package="com.todo"/>
+
+    <!-- 
+        ========== PROPERTY FILE LOADING ==========
+        
+        Loads database.properties file so we can use ${property.name} placeholders
+        This allows us to externalize configuration (don't hardcode values)
+        
+        Benefits:
+        - Easy to change settings without modifying code
+        - Different properties for dev/test/production environments
+        - Keeps sensitive data (passwords) separate from code
+    -->
+    <context:property-placeholder location="classpath:database.properties"/>
+
+    <!-- 
+        ========== DATA SOURCE CONFIGURATION ==========
+        
+        DataSource - Manages database connections
+        
+        What is BasicDataSource?
+        - Apache Commons DBCP2 connection pool
+        - Maintains a pool of reusable database connections
+        - More efficient than creating new connection each time
+        
+        Why use connection pooling?
+        - Creating database connections is expensive (slow)
+        - Reusing connections improves performance
+        - Limits number of connections to database
+        
+        Properties explained:
+        - driverClassName: JDBC driver for MySQL
+        - url: Database connection string
+        - username/password: Database credentials
+        - initialSize: Number of connections created at startup
+        - maxTotal: Maximum number of connections in pool
+    -->
+    <bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource">
+        <!-- Database driver class -->
+        <property name="driverClassName" value="${db.driver}"/>
+        
+        <!-- Database URL (from database.properties) -->
+        <property name="url" value="${db.url}"/>
+        
+        <!-- Database username (from database.properties) -->
+        <property name="username" value="${db.username}"/>
+        
+        <!-- Database password (from database.properties) -->
+        <property name="password" value="${db.password}"/>
+        
+        <!-- Connection pool settings -->
+        <property name="initialSize" value="${db.initialSize}"/>
+        <property name="maxTotal" value="${db.maxTotal}"/>
+    </bean>
+
+    <!-- 
+        ========== JDBC TEMPLATE CONFIGURATION ==========
+        
+        JdbcTemplate - Spring's helper class for database operations
+        
+        What it does:
+        - Simplifies JDBC code (no manual connection handling)
+        - Automatically opens/closes connections
+        - Converts SQL exceptions to Spring exceptions
+        - Provides convenient methods for queries
+        
+        Constructor argument:
+        - ref="dataSource" - Injects the dataSource bean we configured above
+        - This is Dependency Injection in action!
+    -->
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <!-- Inject the dataSource bean -->
+        <constructor-arg ref="dataSource"/>
+    </bean>
+
+    <!-- 
+        ========== TRANSACTION MANAGER CONFIGURATION ==========
+        
+        DataSourceTransactionManager - Manages database transactions
+        
+        What are transactions?
+        - A group of database operations that succeed or fail together
+        - Example: Transfer money = subtract from A + add to B (both must succeed)
+        - If any operation fails, all changes are rolled back
+        
+        Why we need it?
+        - Ensures data consistency
+        - Prevents partial updates
+        - Automatic rollback on errors
+        
+        The @Transactional annotation in TodoServiceImpl uses this manager
+    -->
+    <bean id="transactionManager" 
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!-- Inject the dataSource bean -->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- 
+        ========== ENABLE ANNOTATION-DRIVEN TRANSACTIONS ==========
+        
+        This enables the @Transactional annotation
+        
+        Without this line, @Transactional would be ignored
+        With this line, Spring automatically manages transactions for methods
+        annotated with @Transactional
+    -->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+</beans>
